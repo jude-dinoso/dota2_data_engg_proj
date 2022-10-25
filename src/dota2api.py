@@ -11,7 +11,6 @@ class APIException(Exception):
 
 
 class OpenDota2API:
-
     API_URL = "https://api.opendota.com/api/"
 
     def get_heroes_list(self) -> list[str]:
@@ -20,10 +19,9 @@ class OpenDota2API:
         return json.loads(response.text)
 
     @staticmethod
-    def call_api(api_url:str, query_params=None) -> Optional:
+    def call_api(api_url: str, query_params=None) -> Optional:
         response = requests.get(api_url, params=query_params)
         if response.status_code == 200:
             return response
         else:
             raise APIException("API Exception")
-

@@ -4,6 +4,6 @@ import json
 import pandas as pd
 
 get_data = DataGatherer()
-get_data.get_heroes_data()
+get_data.get_match_data()
 
 print("======= DONE =========")

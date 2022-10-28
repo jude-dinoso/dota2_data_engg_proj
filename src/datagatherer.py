@@ -1,4 +1,5 @@
 import os
+from typing import Tuple
 
 from src.dota2api import *
 import json
@@ -42,6 +43,6 @@ class DataGatherer:
         return []
 
     @staticmethod
-    def save_match_ids(match_ids:list[str]):
+    def save_match_ids(match_ids: Tuple[int, int]):
         with open('data/match_ids.txt', 'wb') as f:
             pickle.dump(match_ids, f)

@@ -25,9 +25,9 @@ class DataGatherer:
         }
         data = self.client.get_public_match_data(**params)
         match_data = pd.DataFrame.from_records(data)
-        match_data = match_data.set_index("match_id")
         new_match_ids = match_data["match_id"].to_list()
-
+        match_data = match_data.set_index("match_id")
+        batch_start_end = (new_match_ids[0], new_match_ids[99])
         for id in new_match_ids:
             if id not in self.match_ids_set:
                 pass

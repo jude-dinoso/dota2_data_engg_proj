@@ -19,6 +19,10 @@ class OpenDota2API:
         return json.loads(response.text)
 
     def get_public_match_data(self, **kwargs) -> list[str]:
+        if not kwargs:
+            kwargs = {
+                "mmr_descending": 60
+            }
         api_url = self.API_URL + "publicMatches"
         query_params = kwargs
         response = self.call_api("GET", api_url, query_params)

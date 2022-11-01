@@ -38,11 +38,11 @@ class DataGatherer:
             new_match_ids = match_data["match_id"].to_list()
             match_data = match_data.set_index("match_id")
             new_match_ids.sort()
-            batch_start_end = [new_match_ids[0], new_match_ids[99]]
+            batch_start_end = [new_match_ids[0], batch_start if batch_start != 9999999999 else new_match_ids[99]]
 
             batch_start = self.find_in_match_ids(match_ids, batch_start_end)
             if batch_start:
-                batch_start_end = [batch_start, new_match_ids[99]]
+                batch_start_end[0] = batch_start
 
             match_data = match_data[match_data.index >= batch_start]
             match_ids.append(batch_start_end)
@@ -50,7 +50,7 @@ class DataGatherer:
 
         match_ids = self.merge_batch_ids(match_ids)
         self.save_df(match_data, "match_data")
-        self.save_match_ids(batch_start_end)
+        self.save_match_ids(match_ids)
 
     @staticmethod
     def save_df(df: DataFrame, directory_name: str):

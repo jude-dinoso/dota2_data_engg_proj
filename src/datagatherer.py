@@ -23,9 +23,8 @@ class DataGatherer:
         heroes_df = pd.DataFrame.from_records(data)
         self.save_df(heroes_df, "heroes")
 
-    def get_match_data(self):
+    def get_match_data(self, batch_start=9999999999) -> Optional[list[int, int]]:
 
-        batch_start = 9999999999
         match_data = pd.DataFrame()
         batch_start_end = []
         match_ids = self.get_retrieved_match_ids()
@@ -51,10 +50,11 @@ class DataGatherer:
         match_ids = self.merge_batch_ids(match_ids)
         self.save_df(match_data, "match_data")
         self.save_match_ids(match_ids)
+        return match_ids[0]
 
     @staticmethod
     def save_df(df: DataFrame, directory_name: str):
-        now = time.strftime("%Y_%m_%d_%H_%M_%S", time.gmtime())
+        now = time.strftime("_%Y_%m_%d_%H_%M_%S", time.gmtime())
         pdvro.to_avro(f"data/{directory_name}/{directory_name + now}.avro", df)
 
     @staticmethod
@@ -71,19 +71,22 @@ class DataGatherer:
         return match_ids
 
     @staticmethod
-    def save_match_ids(match_ids: list[int, int]):
+    def save_match_ids(match_ids: list[list[int, int]]):
         with open('data/match_data/match_ids.pk1', 'wb') as f:
             match_ids.sort(key=lambda x: x[0])
             pickle.dump(match_ids, f)
 
     @staticmethod
-    def find_in_match_ids(match_ids: list[list[int, int]], new_match_id: list[int,int]) -> int:
+    def find_in_match_ids(match_ids: list[list[int, int]], new_match_id: list[int, int]) -> list[int,int]:
 
         for match_id in reversed(match_ids):
-            if match_id[1] > new_match_id[0]:
-                if match_id[0] < new_match_id[0]:
-                    return match_id[1]
-        return new_match_id[0]
+            if match_id[1] >= new_match_id[0]:
+                if match_id[0] <= new_match_id[0]:
+                    return [match_id[1], new_match_id[1]]
+            if match_id[0] <= new_match_id[1]:
+                if match_id[1] > new_match_id[1]:
+                    return [new_match_id[0], match_id[0]]
+        return [new_match_id[0], new_match_id[1]]
 
     @staticmethod
     def merge_batch_ids(match_ids: list[list[int, int]]):

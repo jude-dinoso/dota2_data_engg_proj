@@ -39,11 +39,12 @@ class DataGatherer:
             new_match_ids.sort()
             batch_start_end = [new_match_ids[0], batch_start if batch_start != 9999999999 else new_match_ids[99]]
 
-            batch_start = self.find_in_match_ids(match_ids, batch_start_end)
+            batch_start, batch_end = self.find_in_match_ids(match_ids, batch_start_end)
             if batch_start:
                 batch_start_end[0] = batch_start
-
-            match_data = match_data[match_data.index >= batch_start]
+            if batch_end:
+                batch_start_end[1] = batch_end
+            match_data = match_data[batch_start <= match_data.index <= batch_end]
             match_ids.append(batch_start_end)
             time.sleep(1)
 

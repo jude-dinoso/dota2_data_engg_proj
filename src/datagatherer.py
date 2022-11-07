@@ -15,7 +15,7 @@ class DataGatherer:
 
     def __init__(self):
         self.client = OpenDota2API()
-        self.match_ids_set = set(self.get_retrieved_match_ids())
+        self.match_ids = self.get_retrieved_match_ids()
         self.match_data = []
 
     def get_heroes_data(self):
@@ -33,18 +33,24 @@ class DataGatherer:
                 "less_than_match_id": batch_start
             }
             data = self.client.get_public_match_data(**params)
-            match_data = pd.DataFrame.from_records(data)
-            new_match_ids = match_data["match_id"].to_list()
-            match_data = match_data.set_index("match_id")
+            new_match_data = pd.DataFrame.from_records(data)
+            new_match_ids = new_match_data["match_id"].to_list()
+            new_match_data = new_match_data.set_index("match_id")
             new_match_ids.sort()
             batch_start_end = [new_match_ids[0], batch_start if batch_start != 9999999999 else new_match_ids[99]]
 
-            batch_start, batch_end = self.find_in_match_ids(match_ids, batch_start_end)
+            [batch_start, batch_end] = self.find_in_match_ids(match_ids, batch_start_end)
             if batch_start:
                 batch_start_end[0] = batch_start
             if batch_end:
                 batch_start_end[1] = batch_end
-            match_data = match_data[batch_start <= match_data.index <= batch_end]
+            new_match_data = new_match_data[batch_start <= new_match_data.index]
+            new_match_data = new_match_data[new_match_data.index <= batch_end]
+            if match_data.empty:
+                match_data = new_match_data
+            else:
+                merge_data = [match_data, new_match_data]
+                match_data = pd.concat(merge_data)
             match_ids.append(batch_start_end)
             time.sleep(1)
 
@@ -61,11 +67,11 @@ class DataGatherer:
     @staticmethod
     def get_retrieved_match_ids() -> list[list[int,int]]:
         match_ids = []
-        if os.path.exists("data/match_data/match_ids.pk1"):
-            with open('data/match_ids.pk1', 'rb') as f:
+        if os.path.exists("data/match_data/match_ids/match_ids.pk1"):
+            with open('data/match_data/match_ids/match_ids.pk1', 'rb') as f:
                 try:
                     while True:
-                        match_ids.append(pickle.load(f))
+                        match_ids.extend(pickle.load(f))
                 except EOFError:
                     pass
                 return match_ids
@@ -73,7 +79,7 @@ class DataGatherer:
 
     @staticmethod
     def save_match_ids(match_ids: list[list[int, int]]):
-        with open('data/match_data/match_ids.pk1', 'wb') as f:
+        with open('data/match_data/match_ids/match_ids.pk1', 'wb') as f:
             match_ids.sort(key=lambda x: x[0])
             pickle.dump(match_ids, f)
 
@@ -90,14 +96,24 @@ class DataGatherer:
         return [new_match_id[0], new_match_id[1]]
 
     @staticmethod
-    def merge_batch_ids(match_ids: list[list[int, int]]):
-        match_ids.sort(key=lambda x: x[0])
-        index = 0
-        for i in range(1, len(match_ids)):
-            if match_ids[index][1] >= match_ids[i][0]:
-                match_ids[index][1] = max(match_ids[index][1], match_ids[i][1])
-            else:
-                index += 1
-                match_ids[index] = match_ids[i]
+    def merge_batch_ids(match_ids: list[list[int, int]]) -> list[list[int, int]]:
+        # match_ids.sort(key=lambda x: x[0])
+        # index = 0
+        # for i in range(1, len(match_ids)):
+        #     if match_ids[index][1] >= match_ids[i][0]:
+        #         match_ids[index][1] = max(match_ids[index][1], match_ids[i][1])
+        #     else:
+        #         index += 1
+        #         match_ids[index] = match_ids[i]
+        # if index == 0:
+        #     return [match_ids[0]]
+        # return match_ids
 
-        return match_ids
+        match_ids.sort(key=lambda x: x[0])
+        result = [match_ids[0]]
+        for interval in match_ids[1:]:
+            if interval[0] <= result[-1][1]:
+                result[-1][1] = max(result[-1][1], interval[1])
+            else:
+                result.append(interval)
+        return result

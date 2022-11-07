@@ -8,5 +8,3 @@ match_id = get_data.get_match_data(batch_start=9999999999)
 while True:
     print("======= Batch Done =========")
     match_id = get_data.get_match_data(batch_start=match_id[0])
-
-

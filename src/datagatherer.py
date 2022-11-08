@@ -48,6 +48,8 @@ class DataGatherer:
                 batch_start_end[1] = batch_end
             new_match_data = new_match_data[batch_start <= new_match_data.index]
             new_match_data = new_match_data[new_match_data.index <= batch_end]
+
+            new_match_data = self.filter_match_ids(new_match_data)
             if match_data.empty:
                 match_data = new_match_data
             else:
@@ -110,3 +112,7 @@ class DataGatherer:
             else:
                 result.append(interval)
         return result
+
+    @staticmethod
+    def filter_match_data(match_data:DataFrame) -> DataFrame:
+        match_data.columns()

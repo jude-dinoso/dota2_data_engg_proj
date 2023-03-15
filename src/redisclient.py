@@ -5,6 +5,9 @@ PORT = 6379
 
 
 class _RedisClient:
-    client = redis.Redis
+    client = redis.Redis(host=HOST, port=PORT)
+
+
+RedisClient = _RedisClient()
 
 

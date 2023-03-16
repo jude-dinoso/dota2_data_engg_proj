@@ -1,14 +1,16 @@
+import io
 import os
 from typing import Tuple
 
 from pandas import DataFrame
 
+from src.database import PostgresClient
 from src.dota2api import *
 import json
 import pandas as pd
 import pickle
 import time
-import pandavro as pdvro
+
 
 
 class DataGatherer:
@@ -17,11 +19,22 @@ class DataGatherer:
         self.client = OpenDota2API()
         self.match_ids_set = set(self.get_retrieved_match_ids())
         self.match_data = []
+        self.db = PostgresClient()
 
     def get_heroes_data(self):
         data = self.client.get_heroes_list()
         heroes_df = pd.DataFrame.from_records(data)
-        self.save_df(heroes_df, "heroes")
+        heroes_df.head(0).to_sql('heroes_info', self.db.db_engine, if_exists='replace', index=False)
+        conn = self.db.db_engine.raw_connection()
+        cur = conn.cursor()
+        output = io.StringIO()
+        heroes_df.to_csv(output, sep='\t', header=False, index=False)
+        output.seek(0)
+        cur.copy_from(output, 'heroes_info', null="")  # null values become ''
+        conn.commit()
+        cur.close()
+        conn.close()
+        # self.save_df(heroes_df, "heroes")
 
     def get_match_data(self, batch_start=9999999999) -> Optional[list[int, int]]:
 

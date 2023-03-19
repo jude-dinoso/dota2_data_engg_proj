@@ -3,8 +3,9 @@ import os
 from typing import Tuple
 
 from pandas import DataFrame
+from sqlalchemy import text
 
-from src.database import PostgresClient
+from src.database import PostgresClient, TableOperation
 from src.dota2api import *
 import json
 import pandas as pd
@@ -12,32 +13,25 @@ import pickle
 import time
 
 
-
 class DataGatherer:
 
     def __init__(self):
         self.client = OpenDota2API()
-        self.match_ids_set = set(self.get_retrieved_match_ids())
+        self.match_ids_set = {}
         self.match_data = []
         self.db = PostgresClient()
 
     def get_heroes_data(self):
-        data = self.client.get_heroes_list()
-        heroes_df = pd.DataFrame.from_records(data)
-        heroes_df.head(0).to_sql('heroes_info', self.db.db_engine, if_exists='replace', index=False)
-        conn = self.db.db_engine.raw_connection()
-        cur = conn.cursor()
-        output = io.StringIO()
-        heroes_df.to_csv(output, sep='\t', header=False, index=False)
-        output.seek(0)
-        cur.copy_from(output, 'heroes_info', null="")  # null values become ''
-        conn.commit()
-        cur.close()
-        conn.close()
+        heroes_df = pd.DataFrame.from_records(self.client.get_heroes_list())
+        self.db.insert_data(heroes_df, "heroes_info", TableOperation.REPLACE)
+
         # self.save_df(heroes_df, "heroes")
 
     def get_match_data(self, batch_start=9999999999) -> Optional[list[int, int]]:
 
+        self.match_ids_set = set(self.get_retrieved_match_ids())
+        last_match_id = self.get_last_match_id_interval()
+        self.match_ids_set.add(last_match_id)
         match_data = pd.DataFrame()
         batch_start_end = []
         match_ids = self.get_retrieved_match_ids()
@@ -57,7 +51,9 @@ class DataGatherer:
                 batch_start_end[0] = batch_start
             if batch_end:
                 batch_start_end[1] = batch_end
-            match_data = match_data[batch_start <= match_data.index <= batch_end]
+            match_data = match_data.query(f"{batch_start} <= index <= {batch_end}")
+
+            # self.db.insert_data()
             match_ids.append(batch_start_end)
             time.sleep(1)
 
@@ -69,7 +65,13 @@ class DataGatherer:
     @staticmethod
     def save_df(df: DataFrame, directory_name: str):
         now = time.strftime("_%Y_%m_%d_%H_%M_%S", time.gmtime())
-        pdvro.to_avro(f"data/{directory_name}/{directory_name + now}.avro", df)
+        # pdvro.to_avro(f"data/{directory_name}/{directory_name + now}.avro", df)
+
+    def get_last_match_id_interval(self):
+        query = text("SELECT start_id, end_id FROM dota2_engg_proj_schema.match_id_batch WHERE status = 0 ORDER BY end_id DESC LIMIT 1")
+        result = self.db.conn.execute(query)
+        if result:
+            return result.fetchone()
 
     @staticmethod
     def get_retrieved_match_ids() -> list[list[int,int]]:

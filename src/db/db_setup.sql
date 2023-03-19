@@ -16,3 +16,19 @@ TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS dota2_engg_proj_schema.match_id_batch
     OWNER to postgres;
+
+CREATE TABLE IF NOT EXISTS dota2_engg_proj_schema.heroes_info
+(
+    hero_id integer PRIMARY KEY,
+    name TEXT,
+    localized_name TEXT,
+    primary_attr TEXT,
+	attack_type TEXT,
+	roles TEXT[],
+	legs INTEGER
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS dota2_engg_proj_schema.heroes_info
+    OWNER to postgres;
